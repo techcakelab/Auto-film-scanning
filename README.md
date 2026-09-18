@@ -1,119 +1,202 @@
-# ESP32 135 Autocarrier - Hệ thống quét Film 35mm tự động
+# DIY Auto 35mm Film Scanner (ESP32 Autocarrier)
 
-Dự án mã nguồn mở điều khiển khay vận chuyển và định vị khung hình Film 35mm (135) tự động tốc độ cao cho việc quét ảnh bằng máy ảnh số (Camera Scanning / Digitization), tích hợp **Tay cầm điều khiển (Hand Control Panel)** với cảm giác cơ học cao cấp tương tự **Bobach 135 Autocarrier**.
+An open-source ESP32-based automatic film transport system for digitizing 35mm film using a digital camera. Inspired by the **Bobach 135 Autocarrier**, this project provides precise, high-speed frame-by-frame advancement with a custom **Hand Control Panel**.
 
----
-
-## 1. Thiết kế Tay cầm điều khiển (Hand Control Panel) - Giao tiếp I2C
-
-Tay cầm điều khiển được thiết kế với 1 công tắc, 2 núm vặn và 1 nút chụp lớn, giao tiếp với hệ thống chính qua module **PCF8574T (I2C)** để giảm thiểu số lượng cáp kết nối (chỉ cần 4 dây nguồn/tín hiệu và 1 dây ngắt INT).
-
-```text
-+-------------------------------------------------------------+
-|               135 AUTOCARRIER CONTROL PANEL                 |
-|                                                             |
-|   +-------------------+              +------------------+   |
-|   |   OLED DISPLAY    |              |   ( O ) SHUTTER  |   |
-|   |  [ 128x64 I2C ]   |              |  Nút chụp lớn    |   |
-|   |                   |              |                  |   |
-|   +-------------------+              +------------------+   |
-|                                                             |
-|   [  AUTO - SEMI - MANUAL  ]                                |
-|   Công tắc gạt 3 vị trí MTS-103                             |
-|                                                             |
-|           /---------\                         /---------\   |
-|          |     O     |                       |     O     |  |
-|           \---------/                         \---------/   |
-|           NÚM JOG VỊ TRÍ                    NÚM CHỈNH TỐC ĐỘ|
-|     Xoay để kéo tiến/lùi film         Xoay để thay đổi Speed|
-+-------------------------------------------------------------+
-```
-
-### 3 Chế độ vận hành (Operation Modes):
-1. **`AUTO` (Quét tự động cả cuộn):**
-   * Bấm nút núm xoay hoặc nút Shutter $\rightarrow$ Máy tự động chụp, đếm đúng 8 lỗ sprocket để kéo sang frame tiếp theo, lặp lại cho đến hết 36 tấm hoặc hết film.
-2. **`SEMI` (Chế độ Bán tự động - Quét từng tấm an toàn):**
-   * Rất hữu ích cho film slide E-6 hoặc cuộn film có đoạn chụp đè/lệch khung: Bạn căn chỉnh khung hình đầu tiên $\rightarrow$ Bấm nút Shutter trên tay cầm $\rightarrow$ Máy kích chụp $\rightarrow$ Tự kéo đúng 1 frame (8 lỗ) $\rightarrow$ Dừng chờ bạn bấm chụp tấm tiếp theo.
-3. **`MANUAL` (Chỉnh tay hoàn toàn bằng Núm xoay Hand Wheel):**
-   * Vặn núm xoay theo chiều kim đồng hồ $\rightarrow$ Động cơ kéo film tiến vào từng bước nhỏ theo tay vặn.
-   * Vặn ngược chiều kim đồng hồ $\rightarrow$ Động cơ trả film lùi lại (Rewind).
-   * Bấm nút Shutter trên tay cầm $\rightarrow$ Máy ảnh chụp tấm đang căn.
+![Circuit Diagram](circuit_diagram.jpg)
 
 ---
 
-## 2. Sơ đồ kết nối phần cứng chi tiết
+## ✨ Features
 
-### Bảng kết nối ESP32 với Khay film và Tay điều khiển (I2C PCF8574T):
-
-**1. Kết nối ESP32 với Khay Film / OLED / PCF8574T:**
-| Chân ESP32 | Thiết bị kết nối | Chân trên thiết bị | Chức năng |
-| :--- | :--- | :--- | :--- |
-| **GPIO 18** | Driver Stepper (A4988/TMC2209) | **STEP** | Xung bước động cơ NEMA 42 |
-| **GPIO 19** | Driver Stepper | **DIR** | Chiều quay motor |
-| **GPIO 23** | Driver Stepper | **EN** / **ENABLE** | Bật / Tắt dòng motor |
-| **GPIO 25** | Optocoupler PC817 | **Chân 1 (Anode)** | Kích Shutter máy ảnh |
-| **GPIO 32** | Cảm biến chữ U | **OUT** | Đếm lỗ sprocket |
-| **GPIO 21** | OLED & PCF8574T | **SDA** | Dữ liệu I2C |
-| **GPIO 22** | OLED & PCF8574T | **SCL** | Xung I2C |
-| **GPIO 34** | Module PCF8574T | **INT** | Nhận tín hiệu ngắt từ tay cầm |
-| **3.3V / 5V**| Các Module | **VCC** | Cấp nguồn mạch |
-| **GND** | Các Module | **GND** | Mass toàn hệ thống |
-
-**2. Kết nối mạch PCF8574T với các linh kiện trong Tay Cầm:**
-*(Lưu ý: Tất cả các nút/công tắc đều nối 1 chân vào PCF8574T, chân còn lại nối **GND**)*
-| Chân PCF8574T | Thiết bị trên Tay Cầm | Chức năng |
-| :--- | :--- | :--- |
-| **P0** | Núm JOG Vị trí (KY-040 #1) | Chân **CLK** |
-| **P1** | Núm JOG Vị trí (KY-040 #1) | Chân **DT** |
-| **P2** | Núm Chỉnh Tốc Độ (KY-040 #2) | Chân **CLK** |
-| **P3** | Núm Chỉnh Tốc Độ (KY-040 #2) | Chân **DT** |
-| **P4** | Công tắc MTS-103 (Chân bìa 1) | Chọn chế độ **AUTO** |
-| **P5** | Công tắc MTS-103 (Chân bìa 2) | Chọn chế độ **MANUAL** |
-| *(GND)*| Công tắc MTS-103 (Chân giữa) | *(Nếu không gạt P4 hay P5, mạch tự hiểu là **SEMI**)* |
-| **P6** | Nút bấm Shutter lớn | Bấm chụp (trong chế độ MANUAL) |
-| **P7** | Nút bấm nhỏ (Start/Stop) | Bắt đầu / Tạm dừng (trong AUTO/SEMI) |
+- **3 Operation Modes**: AUTO / SEMI / MANUAL
+- **Sprocket-hole counting** via U-shaped optical sensor for precise frame alignment
+- **Camera shutter trigger** via PC817 optocoupler module (supports 2.5mm / 3.5mm jack)
+- **Hand Control Panel** via PCF8574T I2C expander (only 4 wires needed)
+- **OLED display** (128x64) for real-time status
+- **Web-based hardware test tools** (no app required — just connect to WiFi)
+- **Serial Monitor commands** for quick debugging
 
 ---
 
-## 3. Mạch Kích Shutter máy ảnh (Optocoupler PC817)
+## 🗂️ Project Structure
 
 ```
-ESP32 GPIO 25 ---> [ Điện trở 220Ω ] ---> Chân 1 (Anode) PC817
-ESP32 GND     -------------------------> Chân 2 (Cathode) PC817
-
-Dây Jack máy ảnh (2.5mm / 3.5mm):
-Tip (Shutter) + Ring (Focus)  ---------> Chân 4 (Collector) PC817
-Sleeve (GND / Mass máy ảnh)   ---------> Chân 3 (Emitter) PC817
+esp32_135_autocarrier/
+├── esp32_135_autocarrier.ino   # Main firmware
+├── config.h                    # All GPIO pin definitions & parameters
+├── README.md                   # This file
+├── circuit_diagram.jpg         # Full wiring block diagram
+├── platformio.ini              # PlatformIO config (for VS Code users)
+├── web_test_motor/             # Web UI tool: test stepper motor
+├── web_test_sensor/            # Web UI tool: test optical sensor & shutter
+└── web_test_servo_step/        # Web UI tool: test servo + stepper
 ```
 
 ---
 
-## 4. Cách nạp code vào ESP32
+## 🔌 Hardware List
 
-1. Mở file [**`esp32_135_autocarrier.ino`**](file:///C:/Users/LENOVO/.gemini/antigravity-ide/scratch/esp32_135_autocarrier/esp32_135_autocarrier.ino) trong **Arduino IDE**.
-2. Cài 2 thư viện trong *Library Manager*: `Adafruit SH110X` & `Adafruit GFX Library`.
-3. Chọn board **ESP32 Dev Module** và cổng COM $\rightarrow$ Nhấn **Upload**.
-
----
-
-## 5. Điều khiển qua USB Serial Monitor (Baudrate: 115200)
-
-Bạn có thể cắm cáp USB vào máy tính và gõ lệnh:
-* `start` : Bắt đầu quét tự động (AUTO).
-* `stop` : Dừng khẩn cấp.
-* `mode auto` / `mode semi` / `mode manual` : Đổi chế độ vận hành.
-* `full` / `half` : Đổi chuẩn Full-Frame (8 lỗ) hoặc Half-Frame (4 lỗ).
-* `reset` : Reset số đếm về 0.
+| Component | Model | Purpose |
+|---|---|---|
+| Microcontroller | ESP32 Dev Module | Main controller |
+| Stepper Motor Driver | TMC2209 | Drives film transport motor |
+| Stepper Motor | NEMA 42 | Film transport mechanism |
+| Optical Sensor | U-shaped photo interrupter | Counts sprocket holes |
+| Shutter Trigger | PC817 Optocoupler module | Triggers camera shutter |
+| I2C Expander | PCF8574T | Hand Control Panel interface |
+| Display | 128x64 OLED (SSD1306/SH1106) | Status display |
+| Power Supply | 12V DC Adapter | Main power input |
+| Voltage Regulator | Mini560 DC-DC Buck (5V/5A) | 5V rail for ESP32 & logic |
 
 ---
 
-## 6. Công cụ Test Phần Cứng qua Web WiFi (Servo + Stepper + Shutter + Sensor)
+## ⚡ Wiring (GPIO Pin Assignment)
 
-Chương trình test độc lập toàn diện: [**`web_test_servo_step.ino`**](file:///c:/Users/LENOVO/.gemini/antigravity-ide/scratch/esp32_135_autocarrier/web_test_servo_step.ino)
-* **Kết nối WiFi**: `ESP32_Autocarrier_Test` | Mật khẩu: `12345678`
-* **Truy cập Trình duyệt Web**: [http://192.168.4.1](http://192.168.4.1)
-* **Tính năng Web UI**:
-  * Thanh trượt góc Servo 0° - 180° & chế độ Auto Sweep.
-  * Điều khiển Stepper Motor (Jogging từng bước, quay liên tục, chỉnh tốc độ µs, Enable/Disable driver).
-  * Kiểm tra cảm biến quang chữ U & Kích thử Shutter máy ảnh qua Opto PC817.
+### ESP32 → Peripherals
 
+| ESP32 Pin | Device | Device Pin | Function |
+|---|---|---|---|
+| GPIO18 | TMC2209 | STEP | Step pulse |
+| GPIO19 | TMC2209 | DIR | Motor direction |
+| GPIO23 | TMC2209 | EN | Enable/disable motor (Active LOW) |
+| GPIO25 | PC817 Module | IN+ | Camera shutter trigger |
+| GPIO32 | U-shaped sensor | OUT | Sprocket hole counter (input) |
+| GPIO21 | OLED + PCF8574T | SDA | I2C data |
+| GPIO22 | OLED + PCF8574T | SCL | I2C clock |
+| GPIO34 | PCF8574T | INT | Interrupt from Hand Control Panel |
+
+### PCF8574T (I2C: 0x24) → Hand Control Panel
+
+| PCF8574T Pin | Component | Function |
+|---|---|---|
+| P0 | KY-040 Rotary Encoder | CLK (JOG position) |
+| P1 | KY-040 Rotary Encoder | DT (JOG position) |
+| P2 | MTS-103 Toggle Switch | AUTO mode pin |
+| P3 | MTS-103 Toggle Switch | MANUAL mode pin |
+| P4 | Shutter Button | Trigger camera shutter |
+| P5 | Start/Stop Button | Start / pause scanning |
+| P6 | — | NC (unused) |
+| P7 | — | NC (unused) |
+
+> **Note:** MTS-103 center pin → GND. When neither P2 nor P3 is active = **SEMI** mode.
+
+---
+
+## 🎮 Operation Modes
+
+### AUTO — Full Roll Scan
+Press the **Start/Stop button** → System auto-triggers the camera, counts exactly **8 sprocket holes** to advance one full frame (36x24mm), then repeats until end of roll.
+
+### SEMI — Frame-by-Frame (Safest)
+Ideal for slide film (E-6) or irregularly spaced frames. Align the first frame manually → press **Shutter button** → camera fires → film advances exactly 1 frame (8 holes) → waits for next press.
+
+### MANUAL — Hand Wheel Control
+- **Turn JOG encoder clockwise** → motor advances film forward step by step.
+- **Turn JOG encoder counter-clockwise** → motor rewinds film.
+- **Press Shutter button** → triggers camera at the current frame.
+
+---
+
+## 🔋 Power Supply
+
+```
+12V DC Adapter
+    |
+    |--► VMOT (TMC2209) — Motor power rail (12V)
+    |
+    └--► Mini560 DC-DC Buck Converter
+              |
+              └--► 5V --► ESP32 VIN + all 5V logic
+```
+
+---
+
+## 📷 Camera Shutter Connection (PC817 Module)
+
+The PC817 optocoupler **module** (resistor built-in) provides galvanic isolation between ESP32 and camera:
+
+```
+ESP32 GPIO25 --► IN+  [PC817 Module]  OUT+ --► Camera Jack Tip + Ring (Shutter / Focus)
+ESP32 GND    --► IN-                  OUT- --► Camera Jack Sleeve (GND)
+```
+
+Supports standard **2.5mm** or **3.5mm** camera remote shutter jacks.
+
+---
+
+## 🖥️ Serial Monitor Commands (Baud: 115200)
+
+Connect via USB and send commands:
+
+| Command | Action |
+|---|---|
+| `start` | Start auto scanning |
+| `stop` | Emergency stop |
+| `mode auto` | Switch to AUTO mode |
+| `mode semi` | Switch to SEMI mode |
+| `mode manual` | Switch to MANUAL mode |
+| `full` | Set Full-Frame (8 holes per frame) |
+| `half` | Set Half-Frame (4 holes per frame) |
+| `reset` | Reset frame counter to 0 |
+
+---
+
+## 🌐 Web-Based Hardware Test Tools
+
+Each sub-folder contains a standalone test sketch. Flash it separately to test hardware without the main firmware.
+
+### `web_test_motor/`
+- **WiFi AP:** `ESP32_Autocarrier_Test` | Password: `12345678`
+- **URL:** http://192.168.4.1
+- Test stepper motor: step jogging, continuous run, speed (us delay), enable/disable driver.
+
+### `web_test_sensor/`
+- Test U-shaped optical sensor (live sprocket count).
+- Test camera shutter trigger via PC817 optocoupler.
+
+### `web_test_servo_step/`
+- Servo angle slider (0-180 degrees) with Auto Sweep mode.
+- Combined stepper + servo test.
+
+---
+
+## 🛠️ Flashing the Firmware
+
+### Arduino IDE
+1. Open `esp32_135_autocarrier.ino` in Arduino IDE.
+2. Install libraries via **Library Manager**:
+   - `Adafruit SH110X`
+   - `Adafruit GFX Library`
+3. Select board: **ESP32 Dev Module**.
+4. Select the correct COM port → click **Upload**.
+
+### PlatformIO (VS Code)
+```bash
+pio run --target upload
+```
+
+---
+
+## ⚙️ Key Parameters (`config.h`)
+
+| Define | Default | Description |
+|---|---|---|
+| `HOLES_FULL_FRAME` | `8` | Sprocket holes per full frame (36x24mm) |
+| `HOLES_HALF_FRAME` | `4` | Sprocket holes per half frame (18x24mm) |
+| `DEFAULT_STEP_DELAY_US` | `570` | Motor speed (us between step pulses) |
+| `JOG_STEPS_PER_CLICK` | `32` | Motor steps per JOG encoder click |
+| `SENSOR_DEBOUNCE_US` | `15000` | Optical sensor debounce time (us) |
+| `SHUTTER_PULSE_MS` | `300` | Shutter trigger pulse duration (ms) |
+| `POST_SHUTTER_DELAY_MS` | `400` | Wait after shutter before advancing (ms) |
+| `SETTLE_DELAY_MS` | `80` | Vibration settle time before shutter (ms) |
+| `FILM_TIMEOUT_MS` | `4500` | Film advance timeout protection (ms) |
+
+---
+
+## 📄 License
+
+This project is released as open-source. Feel free to use, modify, and share.
+
+---
+
+*Inspired by the Bobach 135 Autocarrier. Built for the film photography community.*
