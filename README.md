@@ -2,7 +2,7 @@
 
 An open-source ESP32-based automatic film transport system for digitizing 35mm film using a digital camera. This project provides precise, high-speed frame-by-frame advancement with a custom **Hand Control Panel**.
 
-![Circuit Diagram](circuit_diagram.jpg)
+![Overall](bg01.jpg)
 
 ---
 
@@ -79,7 +79,8 @@ esp32_135_autocarrier/
 | P7 | — | NC (unused) |
 
 > **Note:** MTS-103 center pin → GND. When neither P2 nor P3 is active = **SEMI** mode.
-
+---
+![Circuit Diagram](circuit_diagram.jpg)
 ---
 
 ## 🎮 Operation Modes
