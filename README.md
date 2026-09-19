@@ -1,6 +1,6 @@
 # DIY Auto 35mm Film Scanner (ESP32 Autocarrier)
 
-An open-source ESP32-based automatic film transport system for digitizing 35mm film using a digital camera. Inspired by the **Bobach 135 Autocarrier**, this project provides precise, high-speed frame-by-frame advancement with a custom **Hand Control Panel**.
+An open-source ESP32-based automatic film transport system for digitizing 35mm film using a digital camera. This project provides precise, high-speed frame-by-frame advancement with a custom **Hand Control Panel**.
 
 ![Circuit Diagram](circuit_diagram.jpg)
 
@@ -94,6 +94,17 @@ Ideal for slide film (E-6) or irregularly spaced frames. Align the first frame m
 - **Turn JOG encoder clockwise** → motor advances film forward step by step.
 - **Turn JOG encoder counter-clockwise** → motor rewinds film.
 - **Press Shutter button** → triggers camera at the current frame.
+
+#### 🎛️ Adjusting Motor Speed in MANUAL Mode
+- **Hold the Start button for ≥ 2 seconds** → enters **Speed Adjust Mode** (OLED shows `MANUAL (SPD ADJ)`).
+- While in Speed Adjust Mode, **turn the JOG encoder** to change motor speed:
+  - Rotate **clockwise (CW)** → decreases step delay → **faster**.
+  - Rotate **counter-clockwise (CCW)** → increases step delay → **slower**.
+  - Each encoder click changes speed by **50 µs**; range: **100 µs – 3000 µs**.
+- **Press Start once** → exits Speed Adjust Mode, returns to normal JOG.
+
+> **Note:** The speed value is stored in `speedDelay` (µs between step pulses).  
+> Changes take effect immediately on the next JOG move and persist for AUTO/SEMI runs within the same session.
 
 ---
 
@@ -199,4 +210,3 @@ This project is released as open-source. Feel free to use, modify, and share.
 
 ---
 
-*Inspired by the Bobach 135 Autocarrier. Built for the film photography community.*
