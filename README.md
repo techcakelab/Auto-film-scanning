@@ -4,9 +4,9 @@ An open-source ESP32-based automatic film transport system for digitizing 35mm f
 
 ![Overall](bg01.jpg)
 ---
-![WithHandHeld](bg02.jpg)
+![WithHandHeld](bg02.jpeg)
 ---
-![WithoutHandHeld](bg03.jpg)
+![WithoutHandHeld](bg03.jpeg)
 ---
 
 ## ✨ Features
