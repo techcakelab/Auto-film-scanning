@@ -3,7 +3,10 @@
 An open-source ESP32-based automatic film transport system for digitizing 35mm film using a digital camera. This project provides precise, high-speed frame-by-frame advancement with a custom **Hand Control Panel**.
 
 ![Overall](bg01.jpg)
-
+---
+![WithHandHeld](bg02.jpg)
+---
+![WithoutHandHeld](bg03.jpg)
 ---
 
 ## ✨ Features
