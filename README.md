@@ -1,5 +1,5 @@
 # DIY Auto 35mm Film Scanner (ESP32 Autocarrier)
-Youtube Video: https://www.youtube.com/@techcakelab
+[![YouTube Channel](https://img.shields.io/badge/YouTube-Techcakelab-FF0000?style=for-the-badge&logo=youtube&logoColor=white)](https://www.youtube.com/@techcakelab)
 
 An open-source ESP32-based automatic film transport system for digitizing 35mm film using a digital camera. This project provides precise, high-speed frame-by-frame advancement with a custom **Hand Control Panel**.
 
